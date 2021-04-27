@@ -2,6 +2,7 @@ import { baseConfig } from "./webpack.config.base";
 import merge from "webpack-merge";
 import webpack from "webpack";
 import TerserPlugin from "terser-webpack-plugin";
+import CssMinimizerPlugin from "css-minimizer-webpack-plugin";
 
 export const prodConfig: webpack.Configuration = merge(baseConfig, {
     module: {
@@ -27,6 +28,7 @@ export const prodConfig: webpack.Configuration = merge(baseConfig, {
             new TerserPlugin({
                 extractComments: false,
             }),
+            new CssMinimizerPlugin(),
         ],
     },
     performance: {
