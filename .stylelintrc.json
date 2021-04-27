@@ -2,5 +2,13 @@
   "extends": [
     "stylelint-config-standard",
     "stylelint-config-idiomatic-order"
-  ]
+  ],
+  "rules": {
+    "selector-pseudo-class-no-unknown": [
+      true,
+      {
+        "ignorePseudoClasses": ["global", "local"]
+      }
+    ]
+  }
 }
