@@ -8,7 +8,6 @@ import express from "express";
 import cors from "cors";
 import webpackDevMiddleware from "webpack-dev-middleware";
 import webpackHotMiddleware from "webpack-hot-middleware";
-import FriendlyErrorWebpackPlugin from "@soda/friendly-errors-webpack-plugin";
 import SseStream from "ssestream";
 
 (async () => {
@@ -52,32 +51,6 @@ import SseStream from "ssestream";
             );
         }
     }
-
-    devConfig.plugins = [
-        ...(devConfig.plugins || []),
-        new FriendlyErrorWebpackPlugin({
-            compilationSuccessInfo: {
-                messages: [
-                    `The development server is running at ${chalk
-                        .hex(userConfig.colors.blue)
-                        .underline(
-                            `http://${userConfig.devServer.host}:${portToUse}`
-                        )}.`,
-                    `To terminate it, press ${chalk.hex(
-                        userConfig.colors.yellow
-                    )("Ctrl+C")}.`,
-                ],
-                notes: [
-                    "Note that the development build is not optimized.",
-                    `To create a production build, run "${chalk.hex(
-                        userConfig.colors.blue
-                    )("npm run build")}" or "${chalk.hex(
-                        userConfig.colors.blue
-                    )("yarn run build")}".`,
-                ],
-            },
-        }),
-    ];
 
     const app = express();
     const compiler = webpack(devConfig);

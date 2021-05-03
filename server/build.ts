@@ -41,16 +41,5 @@ import { BundleAnalyzerPlugin } from "webpack-bundle-analyzer";
                 console.log(`\n${chalk.hex(userConfig.colors.black).bgHex(userConfig.colors.green)(" DONE ")} Build process completed.`);
             }
         }
-
-        if (userConfig.bundleAnalyzer.enabled) {
-            console.log(`\n${chalk.hex(userConfig.colors.black).bgHex(userConfig.colors.gray)(" INFO ")} The bundle analysis is served at ${chalk.hex(userConfig.colors.blue).underline(`http://${userConfig.bundleAnalyzer.host}:${userConfig.bundleAnalyzer.port}`)}.`);
-            console.log(`${chalk.hex(userConfig.colors.black).bgHex(userConfig.colors.gray)(" INFO ")} To terminate it, press ${chalk.hex(userConfig.colors.yellow)("Ctrl+C")}.`);
-            ["SIGINT", "SIGTERM"].forEach((signal) => {
-                process.on(signal, () => {
-                    console.log(`\n${chalk.hex(userConfig.colors.white).bgHex(userConfig.colors.red)(" QUIT ")} The bundle analysis report server is terminated. See you next time!\n`);
-                    process.exit();
-                });
-            });
-        }
     });
 })();
