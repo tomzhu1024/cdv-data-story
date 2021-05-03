@@ -51,7 +51,6 @@
     }
   ],
   "ignorePatterns": [
-    "server/**/*",
-    "dist/**/*"
+    "server/**/*"
   ]
 }
