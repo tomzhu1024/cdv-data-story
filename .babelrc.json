@@ -12,8 +12,7 @@
     [
       "babel-plugin-import",
       {
-        "libraryName": "antd",
-        "style": true
+        "libraryName": "antd"
       }
     ],
     [
@@ -28,6 +27,7 @@
         "loose": true
       }
     ],
+    "@babel/plugin-transform-runtime",
     "react-hot-loader/babel"
   ]
 }

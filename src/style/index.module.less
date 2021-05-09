@@ -1,64 +1,261 @@
-:global body {
-  margin: 0;
-  overflow-x: hidden;
+@primary-color: #8a958a;
 
-  &::-webkit-scrollbar {
-    display: none;
+:global * {
+  font-family: 'Ubuntu', sans-serif;
+}
+
+.loadingOverlay {
+  position: absolute;
+  z-index: 100;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+
+  :global .ant-spin {
+    position: absolute;
+    top: calc(50% - 25px);
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .loadingText {
+    position: absolute;
+    top: calc(50% + 25px);
+    left: 50%;
+    font-size: 16px;
+    transform: translate(-50%, -50%);
+  }
+
+  .loadingHint {
+    position: absolute;
+    top: calc(50% + 48px);
+    left: 50%;
+    color: #b4b4b4;
+    font-size: 12px;
+    transform: translate(-50%, -50%);
   }
 }
 
-.mapContainer {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-  //background-color: #95f0fc;
-}
-
-.mapPlaceholder {
+.warningBar {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 75%;
-  height: 75%;
-  object-fit: contain;
-  transform: translate(-50%, -50%);
+  z-index: 99;
+  top: 60px;
+  width: 100%;
+  padding: 20px;
 }
 
-.showCaseContainer {
+.headerBar {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  display: flex;
+  overflow: hidden;
   width: 100vw;
-  height: 100vh;
-  overflow-x: hidden;
-  overflow-y: scroll;
-  perspective: 10px;
+  height: 60px;
+  background-color: #2b2b2b;
+  box-shadow: 0 5px 10px rgba(109, 109, 109, 0.48);
 
-  .section {
-    position: relative;
-    z-index: -1 !important;
-    height: 100vh;
-    background-color: #292929;
-    transform-style: preserve-3d;
+  .title {
+    padding-left: 20px;
+    color: #dcdcdc;
+    font-family: 'Girassol', sans-serif;
+    font-size: 28px;
+    line-height: 60px;
+  }
 
-    .img {
-      position: absolute;
-      z-index: 5;
-      top: 50vh;
-      right: 15vw;
-      width: 350px;
-      height: 270px;
-      object-fit: contain;
-      outline: blue 1px solid;
-      transform: translateY(-50%) translateZ(2.5px) scale(0.75);
+  .scopeText {
+    padding-left: 50px;
+    color: #bfbfbf;
+    line-height: 60px;
+  }
+
+  .scopeSelector {
+    width: 170px;
+    height: 60px;
+    padding-top: 15px;
+    padding-left: 12px;
+  }
+
+  .layerText {
+    padding-left: 24px;
+    color: #bfbfbf;
+    line-height: 60px;
+  }
+
+  .layerSelector {
+    width: 170px;
+    height: 60px;
+    padding-top: 15px;
+    padding-left: 12px;
+  }
+}
+
+.contentBox {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  overflow: hidden;
+  width: 100vw;
+  height: calc(100vh - 60px);
+}
+
+.map {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+
+  :global .legendText {
+    fill: #fff;
+    font-size: 10px;
+    line-height: 10px;
+    pointer-events: none;
+    text-shadow: rgba(0, 0, 0, 0.95) 1px 1px 2px;
+  }
+}
+
+.mapOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  pointer-events: none;
+  transition: width 500ms ease-in-out;
+
+  > * {
+    position: absolute;
+    pointer-events: all;
+  }
+
+  .zoomIn {
+    top: 120px;
+    right: 25px;
+  }
+
+  .zoomOut {
+    top: 170px;
+    right: 25px;
+  }
+
+  .panLeft {
+    top: 50px;
+    right: 56px;
+  }
+
+  .panRight {
+    top: 50px;
+    right: 14px;
+  }
+
+  .panUp {
+    top: 28px;
+    right: 35px;
+  }
+
+  .panDown {
+    top: 72px;
+    right: 35px;
+  }
+
+  .timePrev {
+    bottom: 20px;
+    left: calc(50% - 160px);
+  }
+
+  .timeNext {
+    right: calc(50% - 160px);
+    bottom: 20px;
+  }
+
+  .timeAutoPlay {
+    bottom: 15px;
+    left: calc(50% - 210px);
+  }
+
+  .timeSlider {
+    position: absolute;
+    bottom: 20px;
+    left: calc(50% - 120px);
+    width: 240px;
+    padding: 0 10px;
+    background-color: rgba(236, 236, 236, 0.7);
+    border-radius: 12px;
+    box-shadow: rgba(62, 62, 62, 0.2) 4px 4px 7px;
+
+    :global .ant-slider-handle {
+      background-color: #fff;
     }
 
-    .text {
-      position: absolute;
-      top: 50vh;
-      left: 15vw;
-      width: 350px;
-      height: 270px;
-      color: #fff;
-      outline: blue 1px solid;
-      transform: translateY(-50%);
+    :global .ant-slider-track {
+      background-color: @primary-color;
+    }
+  }
+
+  .detailText {
+    position: absolute;
+    bottom: 100px;
+    left: 20px;
+    font-family: 'Girassol', sans-serif;
+    font-size: 14px;
+    pointer-events: none;
+    text-shadow: rgba(77, 77, 77, 0.95) 1px 1px 4px;
+  }
+
+  .regionNameText {
+    position: absolute;
+    bottom: 50px;
+    left: 20px;
+    font-family: 'Girassol', sans-serif;
+    font-size: 32px;
+    pointer-events: none;
+    text-shadow: rgba(77, 77, 77, 0.95) 2px 2px 8px;
+  }
+
+  .timeText {
+    position: absolute;
+    bottom: 0;
+    left: 20px;
+    font-family: 'Girassol', sans-serif;
+    font-size: 40px;
+    pointer-events: none;
+    text-shadow: rgba(77, 77, 77, 0.95) 2px 2px 8px;
+  }
+
+  .creditText {
+    position: absolute;
+    right: 5px;
+    bottom: 2px;
+    font-size: 10px;
+    line-height: 12px;
+    pointer-events: none;
+    text-align: right;
+    text-shadow: rgba(77, 77, 77, 0.95) 1px 1px 4px;
+
+    a {
+      pointer-events: all;
+    }
+  }
+}
+
+.detailBox {
+  position: absolute;
+  right: -360px;
+  width: 360px;
+  height: 100%;
+  background-color: #fff;
+
+  .scrollingContent {
+    padding: 0 10px;
+
+    :global .ant-statistic-title {
+      color: #000;
+      font-family: 'Ubuntu', sans-serif;
+    }
+
+    :global .ant-statistic-content-value,
+    :global .ant-statistic-content-value-int {
+      color: #000;
+      font-family: 'Girassol', sans-serif;
     }
   }
 }

@@ -10,25 +10,26 @@ import LodashWebpackPlugin from "lodash-webpack-plugin";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import ProgressBarWebpackPlugin from "progress-bar-webpack-plugin";
+import { getThemeVariables } from "antd/dist/theme";
 
 const isDevMode = process.env.NODE_ENV === "development";
 
 export const baseConfig: webpack.Configuration = {
     mode: isDevMode ? "development" : "production",
     entry: {
-        index: [path.resolve(userConfig.projectRoot, "src/scripts/index.jsx")],
+        index: [path.resolve(userConfig.projectRoot, "src/scripts/index.jsx")]
     },
     output: {
         path: path.resolve(userConfig.projectRoot, "dist"),
         filename: "[name].bundle.js",
-        publicPath: "./",
+        publicPath: "./"
     },
     module: {
         rules: [
             {
                 test: /\.jsx?$/i,
                 exclude: /node_modules/,
-                use: ["babel-loader"],
+                use: ["babel-loader"]
             },
             {
                 test: /\.tsx?$/i,
@@ -39,25 +40,25 @@ export const baseConfig: webpack.Configuration = {
                         options: {
                             silent: true,
                             useCache: true,
-                            reportFiles: ["src/**/*.{ts,tsx}"],
-                        },
-                    },
-                ],
+                            reportFiles: ["src/**/*.{ts,tsx}"]
+                        }
+                    }
+                ]
             },
             {
                 test: /\.css$/i,
                 use: [
                     isDevMode ? "style-loader" : MiniCssExtractPlugin.loader,
-                    "css-loader",
-                ],
+                    "css-loader"
+                ]
             },
             {
                 test: /\.s[ac]ss$/i,
                 use: [
                     isDevMode ? "style-loader" : MiniCssExtractPlugin.loader,
                     "css-loader",
-                    "sass-loader",
-                ],
+                    "sass-loader"
+                ]
             },
             {
                 test: /\.less$/i,
@@ -66,9 +67,13 @@ export const baseConfig: webpack.Configuration = {
                     "css-loader",
                     {
                         loader: "less-loader",
-                        options: { lessOptions: { javascriptEnabled: true } },
-                    },
-                ],
+                        options: {
+                            lessOptions: {
+                                javascriptEnabled: true,
+                            },
+                        },
+                    }
+                ]
             },
             {
                 test: /\.(png|jpg|gif|woff2?)$/i,
@@ -78,12 +83,12 @@ export const baseConfig: webpack.Configuration = {
                         options: {
                             name: "[name].[ext]",
                             esModule: false,
-                            limit: 1024,
-                        },
-                    },
-                ],
-            },
-        ],
+                            limit: 1024
+                        }
+                    }
+                ]
+            }
+        ]
     },
     plugins: [
         new CleanWebpackPlugin(),
@@ -97,24 +102,24 @@ export const baseConfig: webpack.Configuration = {
             incomplete: chalk.bgHex(userConfig.colors.white)(" "),
             format: `${chalk.hex(userConfig.colors.blue)("* Webpack ")}:bar${chalk.hex(userConfig.colors.blue)(" :msg (:percent)")}`,
             summary: false,
-            clear: true,
+            clear: true
         }),
         new HtmlWebpackPlugin({
             filename: "index.html",
             template: path.resolve(userConfig.projectRoot, "src/templates/index.ejs"),
             minify: !isDevMode,
-            chunks: ["index"],
+            chunks: ["index"]
         }),
         new CopyWebpackPlugin({
             patterns: [
                 {
                     from: path.resolve(userConfig.projectRoot, "src/static"),
-                    to: path.resolve(userConfig.projectRoot, "dist"),
-                },
-            ],
-        }),
+                    to: path.resolve(userConfig.projectRoot, "dist")
+                }
+            ]
+        })
     ],
     resolve: {
-        extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
-    },
+        extensions: [".js", ".jsx", ".ts", ".tsx", ".json"]
+    }
 };
