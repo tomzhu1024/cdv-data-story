@@ -46,7 +46,7 @@
 
 .headerBar {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   top: 0;
   left: 0;
   display: flex;
@@ -239,13 +239,23 @@
 
 .detailBox {
   position: absolute;
-  right: -360px;
+  z-index: 1;
+  right: -380px;
   width: 360px;
   height: 100%;
   background-color: #fff;
+  box-shadow: -5px 0 10px rgba(109, 109, 109, 0.48);
+
+  :global .ant-btn {
+    margin: 15px 20px;
+
+    span {
+      color: #000;
+    }
+  }
 
   .scrollingContent {
-    padding: 0 10px;
+    padding: 20px;
 
     :global .ant-statistic-title {
       color: #000;
@@ -256,6 +266,14 @@
     :global .ant-statistic-content-value-int {
       color: #000;
       font-family: 'Girassol', sans-serif;
+    }
+
+    .sectionHeader {
+      margin-top: 30px;
+      margin-bottom: 12px;
+      color: #000;
+      font-family: 'Girassol', sans-serif;
+      font-size: 24px;
     }
   }
 }

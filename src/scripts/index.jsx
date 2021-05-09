@@ -1,6 +1,3 @@
-/* development-only-start */
-import { hot } from 'react-hot-loader/root';
-/* development-only-end */
 import '../style/theme.less';
 import style from '../style/index.module.less';
 import rocketImg from '../images/rocket.png';
@@ -12,7 +9,7 @@ import PropTypes from 'prop-types';
 import $ from 'jquery';
 import _ from 'lodash';
 import * as d3 from 'd3';
-import { observable, runInAction } from 'mobx';
+import { observable, runInAction, autorun } from 'mobx';
 import { observer } from 'mobx-react';
 import { Alert, Button, Select, Slider, Spin, Row, Col, Statistic } from 'antd';
 import {
@@ -51,6 +48,7 @@ const gState = observable({
     highlightRegionDetails: [0, 0, 0],
     mapZoomScale: 1,
     detailBoxRegionName: '',
+    scopeSwitchCount: 0,
 });
 
 window.addEventListener('resize', () => {
@@ -62,11 +60,6 @@ window.addEventListener('resize', () => {
 const numberWithCommas = (x) =>
     x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-const gradientSteps = [0, 0.25, 0.5, 0.75, 1];
-const gradientColors = ['#FA9B87', '#D4B168', '#D2EB80', '#68D499', '#84BDF5'];
-const voidColor = '#727272';
-const highlightColor = '#b3b3b3';
-
 const prettyPrintNetSpeed = (kbps, precision) => {
     if (kbps >= 1024) {
         return `${_.floor(kbps / 1024, precision)} Mbps`;
@@ -74,6 +67,15 @@ const prettyPrintNetSpeed = (kbps, precision) => {
         return `${_.floor(kbps, precision)} Kbps`;
     }
 };
+
+const gradientSteps = [0, 0.25, 0.5, 0.75, 1];
+const gradientColors = ['#FA9B87', '#D4B168', '#D2EB80', '#68D499', '#84BDF5'];
+const voidColor = '#727272';
+const highlightColor = '#b3b3b3';
+
+let geoData;
+let monthlyData;
+let layerExtents;
 
 @observer
 class LoadingOverlay extends React.Component {
@@ -460,6 +462,262 @@ MapOverlay.propTypes = {
 };
 
 @observer
+class TrendSubplot extends React.Component {
+    d3Ref = React.createRef();
+    w = 360;
+    h = 280;
+    xPadding = 60;
+    yPadding = 20;
+
+    drawAxes = () => {
+        [gState.scopeSwitchCount, gState.detailBoxRegionName];
+        if (!monthlyData) {
+            return;
+        }
+        const xDomain = [
+            new Date(monthlyData.date[0]),
+            new Date(monthlyData.date[monthlyData.date.length - 1]),
+        ];
+
+        this.xScale = d3
+            .scaleTime()
+            .domain(xDomain)
+            .range([this.xPadding, this.w - this.xPadding / 2]);
+        let xAxis = d3.axisBottom(this.xScale);
+        this.xAxisGroup.call(xAxis);
+
+        let yMax = 0;
+        if (monthlyData['countries'][gState.detailBoxRegionName]) {
+            yMax = d3.max(
+                monthlyData['countries'][gState.detailBoxRegionName][
+                    gState.layer
+                ]
+            );
+        }
+        let yDomain = [0, yMax];
+        this.yScale = d3
+            .scaleLinear()
+            .domain(yDomain)
+            .range([this.h - this.yPadding, this.yPadding / 2]);
+        let yAxis = d3.axisLeft(this.yScale);
+        this.yAxisGroup.call(yAxis);
+        this.lineGenerator = d3
+            .line()
+            .x((d) => this.xScale(d.date))
+            .y((d) => this.yScale(d.value));
+    };
+
+    drawLine = () => {
+        [gState.detailBoxRegionName];
+        if (!monthlyData) {
+            return;
+        }
+        let data;
+        if (monthlyData['countries'][gState.detailBoxRegionName]) {
+            data = monthlyData['countries'][gState.detailBoxRegionName][
+                gState.layer
+            ].map((d, i) => ({
+                date: new Date(monthlyData.date[i]),
+                value: d,
+            }));
+        } else {
+            data = [
+                {
+                    date: monthlyData.date[0],
+                    value: 0,
+                },
+            ];
+        }
+        this.graphGroup
+            .selectAll('.line')
+            .transition()
+            .duration(200)
+            .attr('opacity', 0)
+            .remove();
+        this.graphGroup
+            .append('path')
+            .classed('line', true)
+            .attr('d', this.lineGenerator(data))
+            .attr('fill', 'none')
+            .attr('stroke', '#3057e2')
+            .attr('stroke-width', 2)
+            .attr('opacity', 0)
+            .transition()
+            .delay(200)
+            .duration(200)
+            .attr('opacity', 1);
+    };
+
+    drawTimeIndicator = () => {
+        [gState.timeSliderPos, gState.scopeSwitchCount];
+        if (!monthlyData) {
+            return;
+        }
+        this.timeIndicator
+            .attr(
+                'x1',
+                this.xScale(new Date(monthlyData['date'][gState.timeSliderPos]))
+            )
+            .attr(
+                'x2',
+                this.xScale(new Date(monthlyData['date'][gState.timeSliderPos]))
+            )
+            .attr('y1', this.h - this.yPadding)
+            .attr('y2', this.yPadding / 2);
+    };
+
+    componentDidMount() {
+        this.svg = d3
+            .select(this.d3Ref.current)
+            .style('width', '100%')
+            .attr('viewBox', `0 0 ${this.w} ${this.h}`)
+            .attr('preserveAspectRatio', 'xMinYMin meet')
+            .attr('stroke', '#000000')
+            .attr('color', '#000000');
+        this.xAxisGroup = this.svg
+            .append('g')
+            .attr('class', 'xAxisGroup')
+            .attr('transform', 'translate(0,' + (this.h - this.yPadding) + ')');
+        this.yAxisGroup = this.svg
+            .append('g')
+            .attr('class', 'yAxisGroup')
+            .attr('transform', 'translate(' + this.xPadding + ',0)');
+        this.graphGroup = this.svg.append('g').attr('class', 'graphGroup');
+        this.timeIndicator = this.svg
+            .append('line')
+            .classed('timeIndicator', true)
+            .attr('stroke', '#ff2e2e')
+            .attr('stroke-width', 1.5);
+        this.axesARD = autorun(this.drawAxes);
+        this.dataARD = autorun(this.drawLine);
+        this.timeIndicatorARD = autorun(this.drawTimeIndicator);
+    }
+
+    componentWillUnmount() {
+        this.axesARD();
+        this.dataARD();
+        this.timeIndicatorARD();
+    }
+
+    render() {
+        return <svg ref={this.d3Ref} />;
+    }
+}
+
+@observer
+class DetailBox extends React.Component {
+    render() {
+        return (
+            <>
+                <Button
+                    type="ghost"
+                    shape="round"
+                    size="large"
+                    icon={<CloseOutlined style={{ color: '#000000' }} />}
+                    onClick={this.props.onClose}
+                >
+                    Close
+                </Button>
+                <Scrollbar
+                    style={{
+                        width: '100%',
+                        height: 'calc(100% - 30px)',
+                    }}
+                >
+                    <div className={style.scrollingContent}>
+                        <Row gutter={16}>
+                            <Col span={12}>
+                                <Statistic
+                                    title={
+                                        gState.scope === 'global'
+                                            ? 'Country/Region'
+                                            : 'Region'
+                                    }
+                                    value={gState.detailBoxRegionName}
+                                />
+                            </Col>
+                            <Col span={12}>
+                                <Statistic
+                                    title="Total Tests Taken"
+                                    value={
+                                        monthlyData &&
+                                        monthlyData['countries'][
+                                            gState.detailBoxRegionName
+                                        ]
+                                            ? numberWithCommas(
+                                                  monthlyData['countries'][
+                                                      gState.detailBoxRegionName
+                                                  ]['total_tests'][
+                                                      gState.timeSliderPos
+                                                  ]
+                                              )
+                                            : '0'
+                                    }
+                                />
+                            </Col>
+                            <Col span={12}>
+                                <Statistic
+                                    title="Download Speed"
+                                    value={
+                                        monthlyData &&
+                                        monthlyData['countries'][
+                                            gState.detailBoxRegionName
+                                        ] &&
+                                        monthlyData['countries'][
+                                            gState.detailBoxRegionName
+                                        ]['total_tests'][gState.timeSliderPos] >
+                                            0
+                                            ? prettyPrintNetSpeed(
+                                                  monthlyData['countries'][
+                                                      gState.detailBoxRegionName
+                                                  ]['download_kbps'][
+                                                      gState.timeSliderPos
+                                                  ],
+                                                  3
+                                              )
+                                            : 'No Record'
+                                    }
+                                />
+                            </Col>
+                            <Col span={12}>
+                                <Statistic
+                                    title="Upload Speed"
+                                    value={
+                                        monthlyData &&
+                                        monthlyData['countries'][
+                                            gState.detailBoxRegionName
+                                        ] &&
+                                        monthlyData['countries'][
+                                            gState.detailBoxRegionName
+                                        ]['total_tests'][gState.timeSliderPos] >
+                                            0
+                                            ? prettyPrintNetSpeed(
+                                                  monthlyData['countries'][
+                                                      gState.detailBoxRegionName
+                                                  ]['upload_kbps'][
+                                                      gState.timeSliderPos
+                                                  ],
+                                                  3
+                                              )
+                                            : 'No Record'
+                                    }
+                                />
+                            </Col>
+                        </Row>
+                        <p className={style.sectionHeader}>Trend</p>
+                        <TrendSubplot />
+                    </div>
+                </Scrollbar>
+            </>
+        );
+    }
+}
+
+DetailBox.propTypes = {
+    onClose: PropTypes.func,
+};
+
+@observer
 class App extends React.Component {
     vizSvgRef = React.createRef();
     detailBoxRef = React.createRef();
@@ -502,13 +760,13 @@ class App extends React.Component {
     };
 
     drawViz = () => {
-        if (!this.geoData) {
+        if (!geoData) {
             return;
         }
         const layer = gState.layer;
         const dataGroup = this.regionGroup
             .selectAll('.region')
-            .data(this.geoData.features);
+            .data(geoData.features);
         // regions
         const w = $(this.vizSvgRef.current).width();
         const h = $(this.vizSvgRef.current).height();
@@ -518,19 +776,19 @@ class App extends React.Component {
                 [padding, padding],
                 [w - padding, h - padding],
             ],
-            this.geoData
+            geoData
         );
         const pathMaker = d3.geoPath(projection);
         const colorScale = d3
             .scalePow()
-            .domain(gradientSteps.map((x) => x * this.layerScaleExtents[layer]))
+            .domain(gradientSteps.map((x) => x * layerExtents[layer]))
             .range(gradientColors)
             .clamp(true);
         const getVal = (d, layer) => {
-            if (this.monthlyData['countries'][d.properties['NAME']]) {
-                return this.monthlyData['countries'][d.properties['NAME']][
-                    layer
-                ][gState.timeSliderPos];
+            if (monthlyData['countries'][d.properties['NAME']]) {
+                return monthlyData['countries'][d.properties['NAME']][layer][
+                    gState.timeSliderPos
+                ];
             } else {
                 return 0;
             }
@@ -649,15 +907,11 @@ class App extends React.Component {
                 .text(
                     layer !== 'total_tests'
                         ? prettyPrintNetSpeed(
-                              this.layerScaleExtents[layer] * gradientSteps[i],
+                              layerExtents[layer] * gradientSteps[i],
                               0
                           )
                         : numberWithCommas(
-                              _.floor(
-                                  this.layerScaleExtents[layer] *
-                                      gradientSteps[i],
-                                  0
-                              )
+                              _.floor(layerExtents[layer] * gradientSteps[i], 0)
                           )
                 );
         }
@@ -674,39 +928,42 @@ class App extends React.Component {
         runInAction(() => {
             gState.loadingOverlayText = 'Loading map...';
         });
-        this.geoData = await d3.json(`./${name}_map.geojson`);
+        geoData = await d3.json(`./${name}_map.geojson`);
         runInAction(() => {
             gState.loadingOverlayText = 'Loading data...';
         });
-        this.dailyData = await d3.json(`./${name}_daily.json`);
-        this.monthlyData = await d3.json(`./${name}_monthly.json`);
+        monthlyData = await d3.json(`./${name}_monthly.json`);
         // calculate min and max
-        this.layerScaleExtents = {
+        layerExtents = {
             download_kbps:
-                2 *
+                2.5 *
                 d3.mean(
-                    Object.entries(this.monthlyData['countries'])
+                    Object.entries(monthlyData['countries'])
                         .map((e) => e[1]['download_kbps'])
                         .map((e) => d3.max(e))
                 ),
             upload_kbps:
-                2 *
+                2.5 *
                 d3.mean(
-                    Object.entries(this.monthlyData['countries'])
+                    Object.entries(monthlyData['countries'])
                         .map((e) => e[1]['upload_kbps'])
                         .map((e) => d3.max(e))
                 ),
             total_tests:
-                2 *
+                2.5 *
                 d3.mean(
-                    Object.entries(this.monthlyData['countries'])
+                    Object.entries(monthlyData['countries'])
                         .map((e) => e[1]['total_tests'])
                         .map((e) => d3.max(e))
                 ),
         };
+        // notify
+        runInAction(() => {
+            gState.scopeSwitchCount++;
+        });
         // set time ticks
         runInAction(() => {
-            gState.timeSliderTicks = this.monthlyData.date;
+            gState.timeSliderTicks = monthlyData.date;
         });
         runInAction(() => {
             gState.loadingOverlayText = 'Rendering visualization...';
@@ -766,7 +1023,7 @@ class App extends React.Component {
         if (!this.detailBox) {
             this.detailBox = true;
             d3.select(this.detailBoxRef.current)
-                .style('right', '-360px')
+                .style('right', '-380px')
                 .transition()
                 .duration(500)
                 .style('right', '0px');
@@ -784,12 +1041,21 @@ class App extends React.Component {
         d3.select(this.detailBoxRef.current)
             .style('right', '0px')
             .transition()
-            .style('right', '-360px');
+            .style('right', '-380px');
     };
 
+    updateDimension = _.debounce(() => {
+        this.drawLegend();
+    }, 500);
+
     componentDidMount() {
+        window.addEventListener('resize', this.updateDimension);
         this.initViz();
         this.setScope().then();
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('resize', this.updateDimension);
     }
 
     render() {
@@ -799,11 +1065,8 @@ class App extends React.Component {
                     <link rel="shortcut icon" href={rocketImg} />
                     <title>Internet Service Quality Visualizer</title>
                 </Helmet>
-
                 <LoadingOverlay />
                 <WarningBar />
-                <WarningBar />
-
                 <div className={style.headerBar}>
                     <span className={style.title}>
                         Internet Service Quality Visualizer
@@ -831,113 +1094,7 @@ class App extends React.Component {
                         setTime={this.setTime}
                     />
                     <div className={style.detailBox} ref={this.detailBoxRef}>
-                        <Button
-                            type="text"
-                            shape="circle"
-                            size="large"
-                            icon={
-                                <CloseOutlined style={{ color: '#000000' }} />
-                            }
-                            onClick={this.closeDetailBox}
-                        />
-                        <Scrollbar
-                            style={{
-                                width: '100%',
-                                height: 'calc(100% - 30px)',
-                            }}
-                        >
-                            <div className={style.scrollingContent}>
-                                <Row gutter={16}>
-                                    <Col span={12}>
-                                        <Statistic
-                                            title="Country/Region"
-                                            value={gState.detailBoxRegionName}
-                                        />
-                                    </Col>
-                                    <Col span={12}>
-                                        <Statistic
-                                            title="Total Tests Taken"
-                                            value={
-                                                this.monthlyData &&
-                                                this.monthlyData['countries'][
-                                                    gState.detailBoxRegionName
-                                                ]
-                                                    ? numberWithCommas(
-                                                          this.monthlyData[
-                                                              'countries'
-                                                          ][
-                                                              gState
-                                                                  .detailBoxRegionName
-                                                          ]['total_tests'][
-                                                              gState
-                                                                  .timeSliderPos
-                                                          ]
-                                                      )
-                                                    : '0'
-                                            }
-                                        />
-                                    </Col>
-                                    <Col span={12}>
-                                        <Statistic
-                                            title="Download Speed"
-                                            value={
-                                                this.monthlyData &&
-                                                this.monthlyData['countries'][
-                                                    gState.detailBoxRegionName
-                                                ] &&
-                                                this.monthlyData['countries'][
-                                                    gState.detailBoxRegionName
-                                                ]['total_tests'][
-                                                    gState.timeSliderPos
-                                                ] > 0
-                                                    ? prettyPrintNetSpeed(
-                                                          this.monthlyData[
-                                                              'countries'
-                                                          ][
-                                                              gState
-                                                                  .detailBoxRegionName
-                                                          ]['download_kbps'][
-                                                              gState
-                                                                  .timeSliderPos
-                                                          ],
-                                                          3
-                                                      )
-                                                    : 'No Record'
-                                            }
-                                        />
-                                    </Col>
-                                    <Col span={12}>
-                                        <Statistic
-                                            title="Upload Speed"
-                                            value={
-                                                this.monthlyData &&
-                                                this.monthlyData['countries'][
-                                                    gState.detailBoxRegionName
-                                                ] &&
-                                                this.monthlyData['countries'][
-                                                    gState.detailBoxRegionName
-                                                ]['total_tests'][
-                                                    gState.timeSliderPos
-                                                ] > 0
-                                                    ? prettyPrintNetSpeed(
-                                                          this.monthlyData[
-                                                              'countries'
-                                                          ][
-                                                              gState
-                                                                  .detailBoxRegionName
-                                                          ]['upload_kbps'][
-                                                              gState
-                                                                  .timeSliderPos
-                                                          ],
-                                                          3
-                                                      )
-                                                    : 'No Record'
-                                            }
-                                        />
-                                    </Col>
-                                </Row>
-                            </div>
-                        </Scrollbar>
+                        <DetailBox onClose={this.closeDetailBox} />
                     </div>
                 </div>
             </>
@@ -946,7 +1103,3 @@ class App extends React.Component {
 }
 
 ReactDOM.render(<App />, document.getElementById('root'));
-
-/* development-only-start */
-export default hot(App);
-/* development-only-end */
